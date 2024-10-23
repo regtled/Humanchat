@@ -21,8 +21,8 @@ class BaseTTS:
     def __init__(self, opt):
         self.opt = opt
 
-        self.fps = opt.fps ## 每秒帧数
-        self.sample_rate = opt.sample_rate ## 音频采样率
+        self.fps = opt["fps"] ## 每秒帧数
+        self.sample_rate = opt["sample_rate"] ## 音频采样率
         self.chunk = self.sample_rate // self.fps ## 每帧音频数据长度
         self.input_stream = BytesIO() ## 用于缓存流式返回的音频数据
 

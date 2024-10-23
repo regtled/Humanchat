@@ -9,17 +9,17 @@ class BaseASR:
     def __init__(self, opt):
         self.opt = opt
 
-        self.fps = opt.fps
-        self.sample_rate = opt.sample_rate
+        self.fps = opt["fps"]
+        self.sample_rate = opt["sample_rate"]
         self.chunk = self.sample_rate // self.fps
         self.queue = Queue() ## 缓存的音频帧
         self.output_queue = mp.Queue()
 
-        self.batch_size = opt.batch_size
+        self.batch_size = opt["batch_size"]
 
         self.frames = []
-        self.stride_left_size = opt.l
-        self.stride_right_size = opt.r
+        self.stride_left_size = opt["l"]
+        self.stride_right_size = opt["r"]
 
         self.feat_queue = mp.Queue(2)
 
