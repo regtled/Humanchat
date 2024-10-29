@@ -37,16 +37,21 @@ def llm_response(message, digiman):
     3.防止出现过短的句子，tts处理不自然\n
     4.OpenAI的流式返回为token返回，其他llm模型可能为句子返回，若需要调用其他模型请更改\n
     """
-    msgs = list(history)
+    msgs = []
+    prompt = {"role": "system", "content": "请给我纯文本格式输出，请勿使用markdown、latex等格式。"}
+    msgs.append(prompt)
+    for msg in history:
+        msgs.append(msg)
     message = {"role": "user", "content": message}
     msgs.append(message)
+    # print(msgs)
     response = client.chat.completions.create(
         model = "gpt-4o-mini-2024-07-18",
         messages = msgs,
         temperature = 0,
         # top_p = 0,
         stream = True,
-        max_tokens=150
+        max_tokens=150,
     )
 
     partial_message = ""
@@ -76,7 +81,7 @@ def llm_response(message, digiman):
         print("Last sentence: --", sentence)
         digiman.put_msg(sentence)
         # sents.append(sentence)
-    history.append({"role": "system", "content": partial_message})
+    history.append({"role": "assistant", "content": partial_message})
 
 pcs = set()
 
@@ -208,7 +213,7 @@ if __name__ == "__main__":
     multiprocessing.set_start_method('spawn')
 
     from digiman import MuseDigi
-    opt = {"avatar_id": "avator_2", "video_path": "data/digiwoman2.mp4", "bbox_shift": 5, "preparation": False, "batch_size": 16, "sample_rate": 16000, "fps": 50, "l": 10, "r": 10, "tts": "openai"}
+    opt = {"avatar_id": "avator_2", "video_path": "data/digiwoman2.mp4", "bbox_shift": 5, "preparation": False, "batch_size": 16, "sample_rate": 16000, "fps": 50, "l": 10, "r": 10, "tts": "edge"}
     digiman = MuseDigi(opt)
     digimans.append(digiman)
 

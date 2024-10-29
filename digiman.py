@@ -164,13 +164,13 @@ class BaseDigi:
 
     def process_stream(self, byte_stream):
         stream, sample_rate = sf.read(byte_stream)
-        logging.info(f"OpenAI TTS stream: rate {sample_rate}, shape {stream.shape}")
+        logging.info(f"TTS stream: rate {sample_rate}, shape {stream.shape}")
         stream = stream.astype(np.float32)
         if stream.ndim > 1:
-            logging.warning(f"OpenAI TTS stream: stream has {stream.ndim} channels, only use the first channel")
+            logging.warning(f"TTS stream: stream has {stream.ndim} channels, only use the first channel")
             stream = stream[:, 0]
         if sample_rate != self.sample_rate and stream.ndim>0:
-            logging.warning(f"OpenAI TTS stream: sample rate {sample_rate} not equal to {self.sample_rate}, resample")
+            logging.warning(f"TTS stream: sample rate {sample_rate} not equal to {self.sample_rate}, resample")
             stream = resampy.resample(stream, sample_rate, self.sample_rate)
         return stream
     
