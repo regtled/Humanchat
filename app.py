@@ -41,10 +41,10 @@ def llm_response(message, digiman):
     message = {"role": "user", "content": message}
     msgs.append(message)
     response = client.chat.completions.create(
-        model = "gpt-4o-mini",
+        model = "gpt-4o-mini-2024-07-18",
         messages = msgs,
         temperature = 0,
-        top_p = 0,
+        # top_p = 0,
         stream = True,
         max_tokens=150
     )
@@ -58,7 +58,7 @@ def llm_response(message, digiman):
             # print(chunk_message)
             if chunk_message is not None and chunk_message != "":
                 clean_message = re.sub(r'[\x00-\x1f\x7f]', '', chunk_message) ## 清理转义字符，防止TTS出现未知bug
-                match = re.search(r'[,.?!;:，。？！；：]', clean_message)
+                match = re.search(r'[.?!;。？！；]', clean_message)
                 if match:
                     sentence += clean_message[:match.end()] ## OpenAI返回的chunk中可能包含【“，这”】这样的情况，需要分句
                     if len(sentence)>20: ## 防止丢入过短句子
@@ -208,7 +208,7 @@ if __name__ == "__main__":
     multiprocessing.set_start_method('spawn')
 
     from digiman import MuseDigi
-    opt = {"avatar_id": "avator_2", "video_path": "data/digiwoman2.mp4", "bbox_shift": 5, "preparation": False, "batch_size": 16, "sample_rate": 16000, "fps": 50, "l": 10, "r": 10}
+    opt = {"avatar_id": "avator_2", "video_path": "data/digiwoman2.mp4", "bbox_shift": 5, "preparation": False, "batch_size": 16, "sample_rate": 16000, "fps": 50, "l": 10, "r": 10, "tts": "openai"}
     digiman = MuseDigi(opt)
     digimans.append(digiman)
 

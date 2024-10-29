@@ -8,6 +8,8 @@ import numpy as np
 import resampy
 import asyncio
 import logging
+import edge_tts
+
 
 class State(Enum):
     RUNNING=0
@@ -56,11 +58,11 @@ class BaseTTS:
 
 class OpenAITTS(BaseTTS):
     def msg2audio(self, msg):
-        asyncio.run(self.streamout("tts-1", "nova", msg))
+        asyncio.new_event_loop().run_until_complete(self.streamout("tts-1", "nova", msg))
         if self.input_stream.getbuffer().nbytes <= 0:
             logging.warning("OpenAI TTS stream: empty stream, maybe network error or something else!")
             return
-        self.input_stream.seek(0) ## 重置流指针,指向开头，保证从开头读取音频流式数据
+        self.input_stream.seek(0) ## 重置流指针,指向开头，保证从开头读取音频流式数据（包含wav头部信息）
         stream = self.process_stream(self.input_stream) ## 获取当前时刻的音频流快照
         streamlen = stream.shape[0]
         idx = 0
@@ -71,9 +73,9 @@ class OpenAITTS(BaseTTS):
             idx += self.chunk
             streamlen -= self.chunk
         self.input_stream.seek(0)
-        self.input_stream.truncate(0)
+        self.input_stream.truncate()
         # self.input_stream.write(stream[idx:]) ## 有少量数据可能未处理完，为了音频完整性，将剩余数据写入下一次处理，使用一个BytesIO避免内存泄漏的问题
-        ## OpenAI TTS的返回结果为封装好的音频格式，比如wav，有头部信息，只写入末尾数据会有问题！！
+        ## OpenAI TTS的返回结果为封装好的音频格式，比如wav，有头部信息，只写入末尾数据会有问题！！wav头部信息占44字节，期望让这44字节一直留在input_stream里
 
     def process_stream(self, byte_stream):
         stream, sample_rate = sf.read(byte_stream)
@@ -97,7 +99,55 @@ class OpenAITTS(BaseTTS):
                 response_format = "wav",
                 speed = 1,
             )as response:
+                first_chunk = True
                 for chunk in response.iter_bytes():
+                    if first_chunk:
+                        first_chunk = False
                     self.input_stream.write(chunk)
+        except Exception as e:
+            logging.error(f"Streamout error: {e}")
+
+class EdgeTTS(BaseTTS):
+    def msg2audio(self, msg):
+        asyncio.new_event_loop().run_until_complete(self.streamout("zh-CN-YunxiaNeural", msg))
+        if self.input_stream.getbuffer().nbytes <= 0:
+            logging.warning("Edge TTS stream: empty stream, maybe network error or something else!")
+            return
+        self.input_stream.seek(0) ## 重置流指针,指向开头，保证从开头读取音频流式数据（包含wav头部信息）
+        stream = self.process_stream(self.input_stream) ## 获取当前时刻的音频流快照
+        streamlen = stream.shape[0]
+        idx = 0
+
+        while streamlen >= self.chunk and self.state == State.RUNNING:
+            # self.opt.audio_queue.put(stream[idx:idx+self.chunk])
+            self.parent.put_audio_frame(stream[idx:idx+self.chunk])
+            idx += self.chunk
+            streamlen -= self.chunk
+        self.input_stream.seek(0)
+        self.input_stream.truncate()
+
+    def process_stream(self, byte_stream):
+        stream, sample_rate = sf.read(byte_stream)
+        logging.info(f"Edge TTS stream: rate {sample_rate}, shape {stream.shape}")
+        stream = stream.astype(np.float32)
+        if stream.ndim > 1:
+            logging.warning(f"Edge TTS stream: stream has {stream.ndim} channels, only use the first channel")
+            stream = stream[:, 0]
+        if sample_rate != self.sample_rate and stream.ndim>0:
+            logging.warning(f"Edge TTS stream: sample rate {sample_rate} not equal to {self.sample_rate}, resample")
+            stream = resampy.resample(stream, sample_rate, self.sample_rate)
+        return stream
+        
+    async def streamout(self, voice, input):
+        try:
+            communicate = edge_tts.Communicate(input, voice)
+            first = True
+            async for chunk in communicate.stream():
+                if first:
+                    first = False
+                if chunk["type"] == "audio" and self.state==State.RUNNING:
+                    self.input_stream.write(chunk["data"])
+                elif chunk["type"] == "WordBoundary":
+                    pass
         except Exception as e:
             logging.error(f"Streamout error: {e}")

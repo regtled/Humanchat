@@ -17,7 +17,7 @@ import numpy as np
 import multiprocessing as mp
 import soundfile as sf
 from io import BytesIO
-from tts import OpenAITTS
+from tts import OpenAITTS, EdgeTTS
 # from musetalk.utils.preprocessing import get_landmark_and_bbox, read_imgs
 from musetalk.utils.blending import get_image_prepare_material, get_image_blending
 from musetalk.utils.utils import load_audio_processor, load_diffusion_model
@@ -131,7 +131,10 @@ class BaseDigi:
         self.fps = opt["fps"]
         self.chunk = self.sample_rate // self.fps
 
-        self.tts = OpenAITTS(opt, self)
+        if opt['tts'] == "openai":
+            self.tts = OpenAITTS(opt, self)
+        elif opt['tts'] == "edge":
+            self.tts = EdgeTTS(opt, self)
 
         self.curr_state = 0
         self.speaking = False
