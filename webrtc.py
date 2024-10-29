@@ -21,12 +21,12 @@ AUDIO_TIME_BASE = fractions.Fraction(1, SAMPLE_RATE)
 #from aiortc.contrib.media import MediaPlayer, MediaRelay
 #from aiortc.rtcrtpsender import RTCRtpSender
 from aiortc import (
-    MediaStreamTrack,
+    MediaStreamTrack, 
 )
 
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig()
 logger = logging.getLogger(__name__)
-
+logger.setLevel(logging.WARNING)
 
 class PlayerStreamTrack(MediaStreamTrack):
     """

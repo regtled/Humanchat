@@ -8,7 +8,6 @@ import numpy as np
 import resampy
 import asyncio
 import logging
-logging.basicConfig(level=logging.INFO)
 
 class State(Enum):
     RUNNING=0
@@ -18,8 +17,9 @@ class BaseTTS:
     """
     实现一个基础TTS类，提供TTS基础功能，如需加入其他TTS引擎则继承该类
     """
-    def __init__(self, opt):
+    def __init__(self, opt, parent):
         self.opt = opt
+        self.parent = parent
 
         self.fps = opt["fps"] ## 每秒帧数
         self.sample_rate = opt["sample_rate"] ## 音频采样率
@@ -44,6 +44,7 @@ class BaseTTS:
         while not quit_event.is_set():
             try:
                 msg = self.msgqueue.get(block=True, timeout=1)
+                self.state = State.RUNNING
             except queue.Empty:
                 continue
             self.msg2audio(msg)
@@ -57,7 +58,7 @@ class OpenAITTS(BaseTTS):
     def msg2audio(self, msg):
         asyncio.run(self.streamout("tts-1", "nova", msg))
         if self.input_stream.getbuffer().nbytes <= 0:
-            logging.warning("OpenAI TTS stream: empty stream, maybe network error")
+            logging.warning("OpenAI TTS stream: empty stream, maybe network error or something else!")
             return
         self.input_stream.seek(0) ## 重置流指针,指向开头，保证从开头读取音频流式数据
         stream = self.process_stream(self.input_stream) ## 获取当前时刻的音频流快照
@@ -66,11 +67,13 @@ class OpenAITTS(BaseTTS):
 
         while streamlen >= self.chunk and self.state == State.RUNNING:
             # self.opt.audio_queue.put(stream[idx:idx+self.chunk])
+            self.parent.put_audio_frame(stream[idx:idx+self.chunk])
             idx += self.chunk
             streamlen -= self.chunk
         self.input_stream.seek(0)
         self.input_stream.truncate(0)
-        self.input_stream.write(stream[idx:]) ## 有少量数据可能未处理完，为了音频完整性，将剩余数据写入下一次处理，使用一个BytesIO避免内存泄漏的问题
+        # self.input_stream.write(stream[idx:]) ## 有少量数据可能未处理完，为了音频完整性，将剩余数据写入下一次处理，使用一个BytesIO避免内存泄漏的问题
+        ## OpenAI TTS的返回结果为封装好的音频格式，比如wav，有头部信息，只写入末尾数据会有问题！！
 
     def process_stream(self, byte_stream):
         stream, sample_rate = sf.read(byte_stream)
@@ -84,15 +87,17 @@ class OpenAITTS(BaseTTS):
             stream = resampy.resample(stream, sample_rate, self.sample_rate)
         return stream
         
-    async def streamout(self, model, voice, text):
+    async def streamout(self, model, voice, input):
         try:
             client = OpenAI()
             with client.audio.speech.with_streaming_response.create(
                 model = model,
                 voice = voice,
-                text = text,
+                input = input,
+                response_format = "wav",
+                speed = 1,
             )as response:
-                async for chunk in response.iter_bytes():
+                for chunk in response.iter_bytes():
                     self.input_stream.write(chunk)
         except Exception as e:
             logging.error(f"Streamout error: {e}")
