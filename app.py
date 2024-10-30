@@ -1,5 +1,4 @@
 from openai import OpenAI
-import gradio as gr
 import os
 import re
 import json
