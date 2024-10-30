@@ -7,6 +7,14 @@ This project is based on Livetalking from https://github.com/lipku/LiveTalking t
 - The face-changing part uses musetalk (the visual generation effect and real-time performance are almost currently the best).
 - Delay is mainly reflected in calling OpenAI’s TTS service and streaming part.
 
+## Environment Configuration
+
+```
+conda create -n humanchat python=3.10
+conda activate humanchat
+pip install -r requirements.txt
+```
+
 ## Quick Start
 Run the `app.py` script:
 
