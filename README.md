@@ -21,3 +21,10 @@ Run the `app.py` script:
 ```
 python app.py
 ```
+
+## Prepare Your Own Digiman
+Put the prepared closed-mouth video which is frontal most of the time under the fold `data`. Then change the file `prepare.json`, set the `video_path` to its relative path. Then run the `gendigi.py` script:
+
+```
+python gendigi.py
+```
