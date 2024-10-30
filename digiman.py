@@ -220,7 +220,6 @@ class MuseDigi(BaseDigi):
             "bbox_shift": self.bbox_shift,
         }
         
-        self.preparation = opt["preparation"]
         self.batch_size = opt["batch_size"]
         self.res_frame_queue = mp.Queue(self.batch_size*2) ## 两倍是由于音频默认为50帧，视频默认为25帧，存在两倍差
         self.idx = 0

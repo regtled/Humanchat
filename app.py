@@ -214,7 +214,8 @@ if __name__ == "__main__":
     multiprocessing.set_start_method('spawn')
 
     from digiman import MuseDigi
-    opt = {"avatar_id": "avator_2", "video_path": "data/digiwoman2.mp4", "bbox_shift": 5, "preparation": False, "batch_size": 16, "sample_rate": 16000, "fps": 50, "l": 10, "r": 10, "tts": "edge"}
+    with open('config.json', 'r') as f:
+        opt = json.load(f)
     digiman = MuseDigi(opt)
     digimans.append(digiman)
 

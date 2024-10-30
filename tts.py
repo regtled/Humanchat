@@ -115,6 +115,7 @@ class EdgeTTS(BaseTTS):
     '''
     1. 部署了微软Edge TTS的流式输出，按字节流的形式输出，再用soundfile库读取字节流，分chunk传给parent数字人实例\n
     2. 使用Edge TTS是联网服务，需要保证网络通畅；且确保edge_tts库是最新版本的\n
+    addition: edge_tts在中国刚刚被墙了（2024.10.30），需要挂代理\n
     '''
     def msg2audio(self, msg):
         asyncio.new_event_loop().run_until_complete(self.streamout("zh-CN-YunxiaNeural", msg))
@@ -148,7 +149,7 @@ class EdgeTTS(BaseTTS):
         
     async def streamout(self, voice, input):
         try:
-            communicate = edge_tts.Communicate(input, voice)
+            communicate = edge_tts.Communicate(input, voice, proxy="http://127.0.0.1:7890")
             first = True
             async for chunk in communicate.stream():
                 if first:

@@ -1,0 +1,11 @@
+{
+    "avatar_id": "avator_2",
+    "video_path": "data/digiwoman2.mp4",
+    "bbox_shift": 5,
+    "batch_size": 16,
+    "sample_rate": 16000,
+    "fps": 50,
+    "l": 10,
+    "r": 10,
+    "tts": "edge"
+}
