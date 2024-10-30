@@ -21,7 +21,7 @@ class BaseTTS:
     """
     def __init__(self, opt, parent):
         self.opt = opt
-        self.parent = parent
+        self.parent = parent ## parent参数代表这个TTS绑定的是哪个数字人实例
 
         self.fps = opt["fps"] ## 每秒帧数
         self.sample_rate = opt["sample_rate"] ## 音频采样率
@@ -57,6 +57,10 @@ class BaseTTS:
         process_thread.start()
 
 class OpenAITTS(BaseTTS):
+    '''
+    1. 部署OpenAI TTS的流式输出，在使用时请阅读最新文档或查看issue，保证函数可用\n
+    2. 由于返回的格式受限，Opus、AAC、FLAC、WAV、PCM、MP3，含有该格式的头部信息，所以末尾可能会出现少量不足一帧的音频会被丢弃的现象。影响不大\n
+    '''
     def msg2audio(self, msg):
         asyncio.new_event_loop().run_until_complete(self.streamout("tts-1", "nova", msg))
         if self.input_stream.getbuffer().nbytes <= 0:
@@ -108,6 +112,10 @@ class OpenAITTS(BaseTTS):
             logging.error(f"Streamout error: {e}")
 
 class EdgeTTS(BaseTTS):
+    '''
+    1. 部署了微软Edge TTS的流式输出，按字节流的形式输出，再用soundfile库读取字节流，分chunk传给parent数字人实例\n
+    2. 使用Edge TTS是联网服务，需要保证网络通畅；且确保edge_tts库是最新版本的\n
+    '''
     def msg2audio(self, msg):
         asyncio.new_event_loop().run_until_complete(self.streamout("zh-CN-YunxiaNeural", msg))
         if self.input_stream.getbuffer().nbytes <= 0:

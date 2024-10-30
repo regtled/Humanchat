@@ -27,6 +27,9 @@ from asr import MuseASR
 import pdb
 
 def read_imgs(img_list):
+    '''
+    读取文件夹下的图片信息
+    '''
     frames = []
     print('reading images...')
     for img_path in tqdm(img_list):
@@ -34,24 +37,27 @@ def read_imgs(img_list):
         frames.append(frame)
     return frames
 
-def video2imgs(video_path, output_path, ext = 'png', cut_frame = 10000000):
-    cap = cv2.VideoCapture(video_path)
-    count = 0
-    while True:
-        if count > cut_frame:
-            break
-        ret, frame = cap.read()
-        if ret:
-            cv2.imwrite(f"{output_path}/{count:08d}.{ext}", frame)
-            count += 1
-        else:
-            break
+# def video2imgs(video_path, output_path, ext = 'png', cut_frame = 10000000):
+#     cap = cv2.VideoCapture(video_path)
+#     count = 0
+#     while True:
+#         if count > cut_frame:
+#             break
+#         ret, frame = cap.read()
+#         if ret:
+#             cv2.imwrite(f"{output_path}/{count:08d}.{ext}", frame)
+#             count += 1
+#         else:
+#             break
 
-def osmakedirs(path_list):
-    for path in path_list:
-        os.makedirs(path) if not os.path.exists(path) else None
+# def osmakedirs(path_list):
+#     for path in path_list:
+#         os.makedirs(path) if not os.path.exists(path) else None
 
 def __mirror_index(size, index):
+    '''
+    返回索引在给定长度下的镜像索引,以实现循环播放
+    '''
     turn = index // size
     res = index % size
     if turn % 2 == 0:
@@ -61,6 +67,17 @@ def __mirror_index(size, index):
 
 @torch.no_grad()
 def inference(render_event, batch_size, latents_out_path, audio_feature_queue, audio_out_queue, res_frame_queue):
+    '''
+    根据输入的音频特征和掩码，生成嘴部的推理结果，把 1.推理结果（若为静音则设置为none）2.对应数字人的图片的索引 3.音频切片 传递给res_frame_queue，后续单独处理嘴部和脸的融合
+
+    Args:
+        render_event: 事件，用于控制推理的开始和结束
+        batch_size: 推理的批次大小，默认设置为16，若电脑性能较好可适当调大
+        latents_out_path: latents的路径（嘴部）
+        audio_feature_queue: asr里音频特征队列
+        audio_out_queue: asr里音频输出队列
+        res_frame_queue: 结果帧队列
+    '''
     vae, unet, pe = load_diffusion_model()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     timesteps = torch.tensor([0], device=device)
@@ -124,6 +141,9 @@ def inference(render_event, batch_size, latents_out_path, audio_feature_queue, a
             time.sleep(1)
             
 class BaseDigi:
+    '''
+    实现了数字人的基类，包含绑定tts、传递消息和音频帧等功能
+    '''
     def __init__(self, opt):
         self.opt = opt
 
@@ -152,31 +172,31 @@ class BaseDigi:
     def put_audio_frame(self, audio_chunk):
         self.asr.put_audio_frame(audio_chunk)
 
-    def put_audio_file(self, filebyte):
-        input_stream = BytesIO(filebyte)
-        stream = self.process_stream(input_stream)
-        streamlen = stream.shape[0]
-        idx = 0
-        while streamlen >= self.chunk:
-            self.put_audio_frame(stream[idx:idx+self.chunk])
-            idx += self.chunk
-            streamlen -= self.chunk
+    # def put_audio_file(self, filebyte):
+    #     input_stream = BytesIO(filebyte)
+    #     stream = self.process_stream(input_stream)
+    #     streamlen = stream.shape[0]
+    #     idx = 0
+    #     while streamlen >= self.chunk:
+    #         self.put_audio_frame(stream[idx:idx+self.chunk])
+    #         idx += self.chunk
+    #         streamlen -= self.chunk
 
-    def process_stream(self, byte_stream):
-        stream, sample_rate = sf.read(byte_stream)
-        logging.info(f"TTS stream: rate {sample_rate}, shape {stream.shape}")
-        stream = stream.astype(np.float32)
-        if stream.ndim > 1:
-            logging.warning(f"TTS stream: stream has {stream.ndim} channels, only use the first channel")
-            stream = stream[:, 0]
-        if sample_rate != self.sample_rate and stream.ndim>0:
-            logging.warning(f"TTS stream: sample rate {sample_rate} not equal to {self.sample_rate}, resample")
-            stream = resampy.resample(stream, sample_rate, self.sample_rate)
-        return stream
+    # def process_stream(self, byte_stream):
+    #     stream, sample_rate = sf.read(byte_stream)
+    #     logging.info(f"TTS stream: rate {sample_rate}, shape {stream.shape}")
+    #     stream = stream.astype(np.float32)
+    #     if stream.ndim > 1:
+    #         logging.warning(f"TTS stream: stream has {stream.ndim} channels, only use the first channel")
+    #         stream = stream[:, 0]
+    #     if sample_rate != self.sample_rate and stream.ndim>0:
+    #         logging.warning(f"TTS stream: sample rate {sample_rate} not equal to {self.sample_rate}, resample")
+    #         stream = resampy.resample(stream, sample_rate, self.sample_rate)
+    #     return stream
     
-    def set_curr_state(self, audiotype):
-        print('Set curr state:', audiotype)
-        self.curr_state = audiotype
+    # def set_curr_state(self, audiotype):
+    #     print('Set curr state:', audiotype)
+    #     self.curr_state = audiotype
 
 class MuseDigi(BaseDigi):
     def __init__(self, opt):
@@ -202,16 +222,19 @@ class MuseDigi(BaseDigi):
         
         self.preparation = opt["preparation"]
         self.batch_size = opt["batch_size"]
-        self.res_frame_queue = mp.Queue(self.batch_size*2)
+        self.res_frame_queue = mp.Queue(self.batch_size*2) ## 两倍是由于音频默认为50帧，视频默认为25帧，存在两倍差
         self.idx = 0
         self.audio_processor = load_audio_processor()
         self.asr = MuseASR(opt, self.audio_processor)
-        self.asr.warm_up()
+        self.asr.warm_up() ## 预热音频队列
         self.init() ## 加载数字人资源
         self.render_event = mp.Event()
         mp.Process(target=inference, args=(self.render_event, self.batch_size, self.latents_out_path, self.asr.feat_queue, self.asr.output_queue, self.res_frame_queue)).start()
 
     def init(self):
+        '''
+        加载数字人资源包
+        '''
         self.input_latent_list_cycle = torch.load(self.latents_out_path)
         with open(self.coords_path, 'rb') as f:
             self.coord_list_cycle = pickle.load(f)
@@ -346,12 +369,15 @@ class MuseDigi(BaseDigi):
         
     
     def process_frames(self, quit_event, loop = None, audio_track = None, video_track = None):
+        '''
+        合成画面处理，把推流过来的音频和画面分别推流出去，异步处理
+        '''
         while not quit_event.is_set():
             try:
                 res_frame, idx, audio_frames = self.res_frame_queue.get(block=True, timeout=1)
             except queue.Empty:
                 continue
-            if audio_frames[0][1]!=0 and audio_frames[1][1]!=0: ## 两帧音频都是静音
+            if audio_frames[0][1]!=0 and audio_frames[1][1]!=0: ## 两帧音频都是静音（音频为视频帧数两倍，处理一帧画面需要处理两帧音频）
                 self.speaking = False
                 combine_frame = self.frame_list_cycle[idx]
             else:
@@ -381,6 +407,9 @@ class MuseDigi(BaseDigi):
         logging.info('MuseDigi process_frames thread stop')
 
     def render(self, quit_event, loop = None, audio_track = None, video_track = None):
+        '''
+        启动数字人渲染进程，同样异步进行
+        '''
         self.tts.render(quit_event)
         process_thread = Thread(target=self.process_frames, args=(quit_event, loop, audio_track, video_track))
         process_thread.start()
@@ -390,6 +419,6 @@ class MuseDigi(BaseDigi):
             self.asr.run_step()
             if video_track._queue.qsize()>=1.5*self.opt["batch_size"]:
                 print('sleep qsize=', video_track._queue.qsize())
-                time.sleep(0.04 * video_track._queue.qsize()*0.8) ##没太看懂
+                time.sleep(0.04 * video_track._queue.qsize()*0.8) ## 队列里面存的帧数过多，等待视频多播放一会再进行推理推流
         self.render_event.clear()
         logging.log('MuseDigi thread stop')

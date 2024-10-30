@@ -33,7 +33,7 @@ class BaseASR:
         """
         type 0: 有音频帧\n
         type 1: 无音频帧, 静音\n
-        addition: 若嘴角还是有抖动异常，可加小于一定值手动设置为闭嘴\n
+        addition: 若嘴角还是有抖动异常，可加小于一定值手动设置为闭嘴（未实现）\n
         """
         try:
             frame = self.queue.get(block=True, timeout=0.01)

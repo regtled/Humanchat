@@ -19,14 +19,16 @@ import multiprocessing
 import logging
 logging.basicConfig(level=logging.INFO)
 
+## 运行脚本之前检查所在地区是否支持OpenAI API，调用internet_connection/connection_check.py中的ConnectionCheck类
+
 os.environ['HTTP_PROXY'] = f'http://127.0.0.1:7890'
 os.environ['HTTPS_PROXY'] = f'http://127.0.0.1:7890'
 
 client = OpenAI()
 
-history = deque(maxlen=6)
+history = deque(maxlen=6) ## 设置最大记录历史长度
 
-digimans = []
+digimans = [] ## 存储数字人实例，目前只会放一个，如果需要多个，可以通过sessionid分别访问
 
 
 def llm_response(message, digiman):
@@ -62,7 +64,7 @@ def llm_response(message, digiman):
             # print(chunk_message)
             if chunk_message is not None and chunk_message != "":
                 clean_message = re.sub(r'[\x00-\x1f\x7f]', '', chunk_message) ## 清理转义字符，防止TTS出现未知bug
-                match = re.search(r'[.?!;。？！；]', clean_message)
+                match = re.search(r'[.?!;。？！；]', clean_message) ## 只按大断句分，逗号忽略了
                 if match:
                     sentence += clean_message[:match.end()] ## OpenAI返回的chunk中可能包含【“，这”】这样的情况，需要分句
                     if len(sentence)>20: ## 防止丢入过短句子
@@ -82,7 +84,7 @@ def llm_response(message, digiman):
         # sents.append(sentence)
     history.append({"role": "assistant", "content": partial_message})
 
-pcs = set()
+pcs = set() ## 存储所有连接，统一管理
 
 async def offer(request):
     params = await request.json()
