@@ -5,7 +5,9 @@
     "batch_size": 16,
     "sample_rate": 16000,
     "fps": 50,
-    "l": 10,
-    "r": 10,
-    "tts": "edge"
+    "l": 25,
+    "r": 25,
+    "tts": "edge",
+    "ip": "192.168.1.84",
+    "port": 8010
 }

@@ -45,7 +45,7 @@ def llm_response(message, digiman):
         msgs.append(msg)
     message = {"role": "user", "content": message}
     msgs.append(message)
-    # print(msgs)
+    print(msgs)
     response = client.chat.completions.create(
         model = "gpt-4o-mini-2024-07-18",
         messages = msgs,
@@ -63,7 +63,7 @@ def llm_response(message, digiman):
             chunk_message = chunk.choices[0].delta.content
             # print(chunk_message)
             if chunk_message is not None and chunk_message != "":
-                clean_message = re.sub(r'[\x00-\x1f\x7f]', '', chunk_message) ## 清理转义字符，防止TTS出现未知bug
+                clean_message = re.sub(r'[\x00-\x1f\x7f\*\#]', '', chunk_message) ## 清理转义字符，防止TTS出现未知bug
                 match = re.search(r'[.?!;。？！；]', clean_message) ## 只按大断句分，逗号忽略了
                 if match:
                     sentence += clean_message[:match.end()] ## OpenAI返回的chunk中可能包含【“，这”】这样的情况，需要分句
@@ -244,7 +244,7 @@ if __name__ == "__main__":
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(runner.setup())
-        site = web.TCPSite(runner, '192.168.1.84', 8010)
+        site = web.TCPSite(runner, opt['ip'], opt['port'])
         loop.run_until_complete(site.start())
         loop.run_forever()
     run_server(web.AppRunner(app))
