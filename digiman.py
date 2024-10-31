@@ -156,7 +156,7 @@ class BaseDigi:
         elif opt['tts'] == "edge":
             self.tts = EdgeTTS(opt, self)
 
-        self.curr_state = 0
+        # self.curr_state = 0
         self.speaking = False
     
     def put_msg(self, msg):

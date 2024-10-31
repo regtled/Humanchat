@@ -82,6 +82,7 @@ def llm_response(message, digiman):
         print("Last sentence: --", sentence)
         digiman.put_msg(sentence)
         # sents.append(sentence)
+    history.append(message)
     history.append({"role": "assistant", "content": partial_message})
 
 pcs = set() ## 存储所有连接，统一管理

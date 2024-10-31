@@ -58,7 +58,7 @@ class BaseTTS:
 
 class OpenAITTS(BaseTTS):
     '''
-    1. 部署OpenAI TTS的流式输出，在使用时请阅读最新文档或查看issue，保证函数可用\n
+    1. 部署OpenAI TTS的流式输出，在使用时请阅读最新文档或查看issue，保证函数可用(with_streaming_response())\n
     2. 由于返回的格式受限，Opus、AAC、FLAC、WAV、PCM、MP3，含有该格式的头部信息，所以末尾可能会出现少量不足一帧的音频会被丢弃的现象。影响不大\n
     '''
     def msg2audio(self, msg):

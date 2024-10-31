@@ -66,7 +66,7 @@ class BaseASR:
         for _ in range(self.stride_left_size):
             self.output_queue.get()
     
-class MuseASR(BaseASR):
+class MuseASR(BaseASR): ## 源代码：https://github.com/lipku/LiveTalking/blob/main/museasr.py，修改了原musetalk里feature2chunks函数，对比musetalk源码 传参有改变
     def __init__(self, opt, audio_processor:Audio2Feature):
         super().__init__(opt)
         self.audio_processor = audio_processor
